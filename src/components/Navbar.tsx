@@ -1,4 +1,5 @@
 'use client'
+
 import Link from 'next/link'
 import DarkToggle from './DarkToggle'
 import { useSessionContext, useUser } from '@supabase/auth-helpers-react'
@@ -9,14 +10,15 @@ export default function Navbar() {
   const { session } = useSessionContext()
   const user = useUser()
 
-  const logout = async () => await supabase.auth.signOut()
+  const logout = async () => {
+    await supabase.auth.signOut()
+  }
 
   return (
-    <nav className="flex justify-between p-4 bg-white dark:bg-gray-800">
-      <Link href="/">Logo</Link>
+    <nav className="flex justify-between p-4 bg-white dark:bg-background">
+      <Link href="/">BetterBooking.</Link>
       <div className="space-x-4">
         <Link href="/services">Services</Link>
-        {/* add more links */}
       </div>
       <div className="flex items-center space-x-4">
         <DarkToggle />
@@ -26,7 +28,7 @@ export default function Navbar() {
             <button onClick={logout}>Logout</button>
           </>
         ) : (
-          <Link href="/auth/login">Login</Link>
+          <Link href="/auth">Login</Link>
         )}
       </div>
     </nav>
