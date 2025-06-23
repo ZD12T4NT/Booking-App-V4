@@ -1,5 +1,4 @@
+// lib/supabase.ts
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
-export const supabase = () => {
-  return createClientComponentClient()
-}
+export const supabase = createClientComponentClient() 

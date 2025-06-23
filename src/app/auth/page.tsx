@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 export default function AuthPage() {
   const router = useRouter()
@@ -14,30 +15,36 @@ export default function AuthPage() {
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
 
-  const handleAuth = async () => {
-    if (!email || !password || (!isLogin && !username)) {
-      alert('Please fill all required fields.')
-      return
-    }
+const [loading, setLoading] = useState(false)
 
+const handleAuth = async () => {
+  setLoading(true)
+  try {
     if (isLogin) {
-      const { error } = await supabase().auth.signInWithPassword({ email, password })
-      if (error) return alert(error.message)
-      router.push('/dashboard/user') // optional: fetch user role to route dynamically
-    } else {
-      const { data, error } = await supabase().auth.signUp({ email, password })
-      if (error) return alert(error.message)
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) return toast.error(error.message)
 
-      await supabase().from('profiles').insert({
+      toast.success('Logged in!')
+      router.push('/dashboard/user')
+    } else {
+      const { data, error } = await supabase.auth.signUp({ email, password })
+      if (error) return toast.error(error.message)
+
+      await supabase.from('profiles').insert({
         id: data.user?.id,
         username,
         role: 'user',
       })
 
-      alert('Signup successful. You can now log in.')
+      toast.success('Signup successful. You can now log in.')
       setIsLogin(true)
     }
+  } finally {
+    setLoading(false)
   }
+}
+
+
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
@@ -53,21 +60,26 @@ export default function AuthPage() {
               onChange={(e) => setUsername(e.target.value)}
             />
           )}
+
           <Input
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
           />
+
+
           <Input
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <Button className="w-full" onClick={handleAuth}>
-            {isLogin ? 'Login' : 'Sign Up'}
-          </Button>
+            <Button className="w-full" onClick={handleAuth} disabled={loading}>
+              {loading ? 'Loading...' : isLogin ? 'Login' : 'Sign Up'}
+            </Button>
+
           <Button
             variant="ghost"
             className="w-full text-sm text-muted-foreground"
