@@ -1,18 +1,23 @@
 'use client'
 
 import { ThemeProvider } from 'next-themes'
-import { SessionContextProvider } from '@supabase/auth-helpers-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { ReactNode } from 'react'
+import { createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs'
+import { SessionContextProvider } from '@supabase/auth-helpers-react'
+import { useState } from 'react'
 
-export default function Providers({ children }: { children: ReactNode }) {
-  const supabase = createClientComponentClient()
+export default function Providers({
+  children,
+}: {
+  children: ReactNode
+}) {
+  const [supabaseClient] = useState(() => createBrowserSupabaseClient())
 
   return (
-    <SessionContextProvider supabaseClient={supabase}>
-      <ThemeProvider attribute="class" defaultTheme="light">
+    <ThemeProvider attribute="class" defaultTheme="light">
+      <SessionContextProvider supabaseClient={supabaseClient}>
         {children}
-      </ThemeProvider>
-    </SessionContextProvider>
+      </SessionContextProvider>
+    </ThemeProvider>
   )
 }

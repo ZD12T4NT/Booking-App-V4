@@ -3,19 +3,17 @@
 import Link from 'next/link'
 import DarkToggle from './DarkToggle'
 import { useSessionContext, useUser } from '@supabase/auth-helpers-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 export default function Navbar() {
-  const supabase = createClientComponentClient()
-  const { session } = useSessionContext()
+  const { supabaseClient, session } = useSessionContext()
   const user = useUser()
 
   const logout = async () => {
-    await supabase.auth.signOut()
+    await supabaseClient.auth.signOut()
   }
 
   return (
-    <nav className="flex justify-between p-4 bg-white dark:bg-background">
+    <nav className="flex justify-between p-4 bg-white dark:bg-gray-800">
       <Link href="/">BetterBooking.</Link>
       <div className="space-x-4">
         <Link href="/services">Services</Link>
