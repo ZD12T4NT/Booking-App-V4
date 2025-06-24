@@ -5,6 +5,7 @@ import { ReactNode } from 'react'
 import { createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs'
 import { SessionContextProvider } from '@supabase/auth-helpers-react'
 import { useState } from 'react'
+import { Toaster } from 'sonner'
 
 export default function Providers({
   children,
@@ -16,6 +17,7 @@ export default function Providers({
   return (
     <ThemeProvider attribute="class" defaultTheme="light">
       <SessionContextProvider supabaseClient={supabaseClient}>
+        <Toaster />
         {children}
       </SessionContextProvider>
     </ThemeProvider>

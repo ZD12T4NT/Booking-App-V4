@@ -24,17 +24,39 @@ const handleAuth = async () => {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) return toast.error(error.message)
 
+      // Get user ID
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        toast.error('Failed to get user after login')
+        return
+      }
+
+      // Fetch role from profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError || !profile) {
+        toast.error('Failed to fetch user role')
+        return
+      }
+
       toast.success('Logged in!')
-      router.push('/dashboard/user')
+
+      // Redirect based on role
+      if (profile.role === 'admin') {
+        router.push('/dashboard/admin')
+      } else {
+        router.push('/dashboard/user')
+      }
     } else {
       const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) return toast.error(error.message)
-
-      await supabase.from('profiles').insert({
-        id: data.user?.id,
-        username,
-        role: 'user',
-      })
 
       toast.success('Signup successful. You can now log in.')
       setIsLogin(true)

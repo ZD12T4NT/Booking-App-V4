@@ -1,51 +1,48 @@
-// /dashboard/admin/page.tsx
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { useRouter } from 'next/navigation'
 
-export default function AdminDashboard() {
+export default function DashboardRedirector() {
   const router = useRouter()
   const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(true)
-  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    const checkAdmin = async () => {
+    const fetchRole = async () => {
       const {
         data: { session },
+        error: sessionError
       } = await supabase.auth.getSession()
 
-      if (!session?.user) {
+      if (!session?.user || sessionError) {
         router.push('/auth')
         return
       }
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', session.user.id)
         .single()
 
-      if (profile?.role !== 'admin') {
-        router.push('/dashboard/user')
+      if (profileError || !profile?.role) {
+        router.push('/auth')
+        return
+      }
+
+      if (profile.role === 'admin') {
+        router.push('/dashboard/admin')
       } else {
-        setIsAdmin(true)
+        router.push('/dashboard/user')
       }
 
       setLoading(false)
     }
 
-    checkAdmin()
+    fetchRole()
   }, [router, supabase])
 
-  if (loading) return <p>Loading...</p>
-  if (!isAdmin) return null
-
-  return (
-    <div>
-      <h1 className="text-xl">Admin Dashboard</h1>
-    </div>
-  )
+  return loading ? <p className="p-4">Redirecting...</p> : null
 }
