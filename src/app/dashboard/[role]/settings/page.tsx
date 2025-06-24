@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { User } from 'lucide-react'
+import { useUser } from '@supabase/auth-helpers-react'
 
 
 const profileSchema = z.object({
@@ -47,43 +48,24 @@ export default function SettingsPage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
 
-  // Load user profile on mount
-  useEffect(() => {
-    async function loadProfile() {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession()
 
-      if (sessionError || !session?.user) {
-        toast.error('Not authenticated')
-        router.push('/auth')
-        return
-      }
+const user = useUser()
 
-      // Fetch profile info
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('username, email, avatar_url')
-        .eq('id', session.user.id)
-        .single()
+useEffect(() => {
+  if (!user) {
+    toast.error('Not authenticated')
+    router.push('/auth')
+    return
+  }
 
-      if (error) {
-        toast.error('Failed to load profile')
-        return
-      }
+  async function loadProfile() {
+    // now safe to access user.id
+  }
 
-      if (profile) {
-        resetProfile({
-          username: profile.username || '',
-          email: profile.email || session.user.email || '',
-        })
-        setAvatarUrl(profile.avatar_url)
-      }
-    }
+  loadProfile()
+}, [user, router, supabase])
 
-    loadProfile()
-  }, [router, supabase])
+
 
   // Profile form
   const {
@@ -114,7 +96,8 @@ export default function SettingsPage() {
   const file = event.target.files[0]
   const fileExt = file.name.split('.').pop()
   const fileName = `${crypto.randomUUID()}.${fileExt}`
-  const filePath = `${fileName}` // No prefix here; Supabase will use the bucket root
+  const filePath = `avatars/${fileName}`
+
 
   // If you want a consistent upload path like avatars/user_id/avatar.jpg
   // const filePath = `public/${userId}/avatar.${fileExt}`
