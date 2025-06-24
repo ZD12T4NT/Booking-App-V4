@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function AuthPage() {
   const router = useRouter()
@@ -14,6 +15,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
 const [loading, setLoading] = useState(false)
 
@@ -91,16 +93,48 @@ const handleAuth = async () => {
             disabled={loading}
           />
 
+          <div className="relative">
+            <Input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+              className="pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground"
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
 
-          <Input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-            <Button className="w-full" onClick={handleAuth} disabled={loading}>
-              {loading ? 'Loading...' : isLogin ? 'Login' : 'Sign Up'}
-            </Button>
+          {isLogin && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (!email) return toast.error('Enter your email first')
+                const { error } = await supabase.auth.resetPasswordForEmail(email)
+                if (error) toast.error(error.message)
+                else toast.success('Password reset link sent!')
+              }}
+              className="text-sm text-blue-600 hover:underline mt-1"
+            >
+              Forgot your password?
+            </button>
+          )}
+
+          {/* ✅ Restore this missing main auth button */}
+          <Button
+            className="w-full"
+            onClick={handleAuth}
+            disabled={loading}
+          >
+            {loading ? 'Loading...' : isLogin ? 'Login' : 'Sign Up'}
+          </Button>
 
           <Button
             variant="ghost"
@@ -110,6 +144,7 @@ const handleAuth = async () => {
             {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Login'}
           </Button>
         </CardContent>
+
       </Card>
     </div>
   )
