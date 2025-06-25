@@ -1,21 +1,40 @@
-// components/DashboardNavbar.tsx
-
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSessionContext } from '@supabase/auth-helpers-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { LogOut, Settings, User } from 'lucide-react'
 import DarkToggle from './DarkToggle'
+import Link from 'next/link'
 
 export default function DashboardNavbar() {
   const { session, supabaseClient } = useSessionContext()
   const router = useRouter()
+  const userInitial = session?.user?.email?.[0].toUpperCase() || 'U'
 
-  const user = session?.user
-  const avatarUrl = user?.user_metadata?.avatar_url
-  const userInitial = user?.email?.[0].toUpperCase() || 'U'
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data, error } = await supabaseClient.auth.getUser()
+      if (data?.user) {
+        setAvatarUrl(data.user.user_metadata?.avatar_url ?? null)
+      }
+    }
+
+    getUser()
+
+    // Optional: subscribe to auth changes so it updates on reauth too
+    const { data: authListener } = supabaseClient.auth.onAuthStateChange(() => {
+      getUser()
+    })
+
+    return () => {
+      authListener?.subscription.unsubscribe()
+    }
+  }, [supabaseClient])
 
   const handleLogout = async () => {
     await supabaseClient.auth.signOut()
@@ -24,7 +43,7 @@ export default function DashboardNavbar() {
 
   return (
     <nav className="flex justify-between items-center px-6 py-3 border-b bg-background">
-      <h1 className="text-xl font-semibold">BetterBooking Dashboard</h1>
+      <Link href="/" className="text-xl font-semibold">BetterBooking.</Link>
 
       <div className="flex items-center gap-4">
         <DarkToggle />
@@ -32,7 +51,7 @@ export default function DashboardNavbar() {
         <DropdownMenu>
           <DropdownMenuTrigger>
             <Avatar className="cursor-pointer">
-              <AvatarImage src={avatarUrl} />
+              <AvatarImage src={avatarUrl ? `${avatarUrl}?v=${Date.now()}` : undefined} />
               <AvatarFallback>{userInitial}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>

@@ -8,28 +8,64 @@ import {
   Users,
   Settings,
   LogOut,
-  ChevronsLeft,
-  ChevronsRight,
   PanelRightOpen,
   PanelRightClose,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useState } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 
 interface SidebarProps {
   onNavigate?: () => void
 }
 
-export default function Sidebar({ onNavigate }: SidebarProps) {
+const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
   const pathname = usePathname()
   const router = useRouter()
-  const { supabaseClient, session } = useSessionContext()
-
-  const role = session?.user.user_metadata.role ?? 'user'
-
+  const { supabaseClient } = useSessionContext()
   const [collapsed, setCollapsed] = useState(false)
+  const [role, setRole] = useState<'admin' | 'user'>('user')
 
-  const commonLinks = [
+  // 👇 Fetch latest user info instead of relying on session
+  useEffect(() => {
+    const fetchRole = async () => {
+  const { data: authData, error: authError } = await supabaseClient.auth.getUser()
+  const user = authData?.user
+
+  if (!user) return
+
+  // Try getting role from metadata first
+  const metadataRole = user.user_metadata?.role
+  if (metadataRole) {
+    setRole(metadataRole === 'admin' ? 'admin' : 'user')
+    return
+  }
+
+  // Fallback: fetch from profiles table
+  const { data: profileData, error: profileError } = await supabaseClient
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profileData?.role) {
+    setRole(profileData.role === 'admin' ? 'admin' : 'user')
+  }
+}
+
+
+    fetchRole()
+
+    // Subscribe to auth state changes
+    const { data: authListener } = supabaseClient.auth.onAuthStateChange(() => {
+      fetchRole()
+    })
+
+    return () => {
+      authListener?.subscription.unsubscribe()
+    }
+  }, [supabaseClient])
+
+  const commonLinks = useMemo(() => [
     {
       href: `/dashboard/${role}`,
       label: 'Dashboard',
@@ -40,22 +76,22 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
       label: 'Settings',
       icon: <Settings className="h-4 w-4" />,
     },
-  ]
+  ], [role])
 
-  const adminLinks = [
+  const adminLinks = useMemo(() => [
     {
       href: `/dashboard/admin/users`,
       label: 'Manage Users',
       icon: <Users className="h-4 w-4" />,
     },
-  ]
+  ], [])
 
-  const links = [...commonLinks, ...(role === 'admin' ? adminLinks : [])]
+  const links = role === 'admin' ? [...commonLinks, ...adminLinks] : commonLinks
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await supabaseClient.auth.signOut()
     router.push('/auth')
-  }
+  }, [supabaseClient, router])
 
   return (
     <aside
@@ -65,36 +101,39 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
       )}
     >
       <div className="space-y-2 p-4">
-        {/* <h2 className="text-lg font-semibold">Navigation</h2> */}
-
         <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="mb-4 cursor-pointer transition"
+          onClick={() => setCollapsed((prev) => !prev)}
+          className="mb-4 p-2 rounded hover:bg-muted-foreground/10 transition"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? <PanelRightClose size={20} /> : <PanelRightOpen size={20} />}
         </button>
 
-        {links.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            onClick={onNavigate}
-            className={cn(
-              'flex items-center space-x-3 rounded-md hover:underline ',
-              pathname === link.href && 'underline font-medium'
-            )} 
-          >
-            {link.icon}
-            {!collapsed && <span>{link.label}</span>}
-          </Link>
-        ))}
+        {links.map(({ href, label, icon }) => {
+          const isActive = pathname.startsWith(href)
+          return (
+            <Link
+              key={href}
+              href={href}
+              onClick={onNavigate}
+              className={cn(
+                'flex items-center space-x-3 rounded-md py-2 px-3 transition-colors hover:bg-muted-foreground/10',
+                isActive && 'bg-muted-foreground/10 font-medium'
+              )}
+            >
+              {icon}
+              {!collapsed && <span>{label}</span>}
+            </Link>
+          )
+        })}
       </div>
 
       <div className="p-4">
         <button
           onClick={logout}
+          aria-label="Logout"
           className={cn(
-            'flex items-center space-x-2 text-sm hover:text-destructive',
+            'flex items-center space-x-2 text-sm text-destructive hover:underline',
             collapsed && 'justify-center'
           )}
         >
@@ -105,3 +144,5 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
     </aside>
   )
 }
+
+export default Sidebar

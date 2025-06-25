@@ -37,25 +37,41 @@ const handleAuth = async () => {
       }
 
       // Fetch role from profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
+    // Fetch role from profile
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single()
 
-      if (profileError || !profile) {
-        toast.error('Failed to fetch user role')
-        return
-      }
+          if (profileError || !profile) {
+            toast.error('Failed to fetch user role')
+            return
+          }
 
-      toast.success('Logged in!')
+          // Sync role into user_metadata for session-based access
+          await supabase.auth.updateUser({
+            data: {
+              role: profile.role,
+            },
+          })
 
-      // Redirect based on role
-      if (profile.role === 'admin') {
-        router.push('/dashboard/admin')
-      } else {
-        router.push('/dashboard/user')
-      }
+          await supabase.auth.refreshSession()
+
+          toast.success('Logged in!')
+
+          // Redirect based on role
+          if (profile.role === 'admin') {
+            router.push('/dashboard/admin')
+          } else {
+            router.push('/dashboard/user')
+          }
+
+          await supabase.auth.updateUser({
+            data: { role: profile.role },
+          })
+          await supabase.auth.refreshSession()
+
     } else {
       const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) return toast.error(error.message)
