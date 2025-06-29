@@ -5,3 +5,4 @@ import DashboardRedirector from '@/components/layouts/DashboardRedirector'
 export default function DashboardPage() {
   return <DashboardRedirector />
 }
+ 
