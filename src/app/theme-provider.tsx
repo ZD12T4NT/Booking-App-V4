@@ -1,18 +1,13 @@
 'use client'
 
 import { ThemeProvider } from 'next-themes'
-import { ReactNode } from 'react'
-import { createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs'
+import { ReactNode, useState } from 'react'
 import { SessionContextProvider } from '@supabase/auth-helpers-react'
-import { useState } from 'react'
+import { supabaseBrowser } from '@/lib/supabase-browser'
 import { Toaster } from 'sonner'
 
-export default function Providers({
-  children,
-}: {
-  children: ReactNode
-}) {
-  const [supabaseClient] = useState(() => createBrowserSupabaseClient())
+export default function Providers({ children }: { children: ReactNode }) {
+  const [supabaseClient] = useState(() => supabaseBrowser)
 
   return (
     <ThemeProvider attribute="class" defaultTheme="light">
