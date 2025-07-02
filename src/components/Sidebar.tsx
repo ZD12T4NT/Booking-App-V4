@@ -23,47 +23,63 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
   const router = useRouter()
   const { supabaseClient } = useSessionContext()
   const [collapsed, setCollapsed] = useState(false)
-  const [role, setRole] = useState<'admin' | 'user'>('user')
-
-  // 👇 Fetch latest user info instead of relying on session
-  useEffect(() => {
-    const fetchRole = async () => {
-  const { data: authData, error: authError } = await supabaseClient.auth.getUser()
-  const user = authData?.user
-
-  if (!user) return
-
-  // Try getting role from metadata first
-  const metadataRole = user.user_metadata?.role
-  if (metadataRole) {
-    setRole(metadataRole === 'admin' ? 'admin' : 'user')
-    return
-  }
-
-  // Fallback: fetch from profiles table
-  const { data: profileData, error: profileError } = await supabaseClient
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profileData?.role) {
-    setRole(profileData.role === 'admin' ? 'admin' : 'user')
-  }
-}
+ const [role, setRole] = useState<'admin' | 'user' | null>(null);
 
 
+  // Fetch latest user info instead of relying on session
+ useEffect(() => {
+  const fetchRole = async () => {
+    const { data: authData } = await supabaseClient.auth.getUser()
+    const user = authData?.user
+    if (!user) return
+
+    // 1. Check metadata
+    let role = user.user_metadata?.role
+
+    // 2. If missing, fetch from `profiles` table
+    
+    // Fallback to profiles table if role is missing
+            if (!role) {
+              const { data: profileData, error } = await supabaseClient
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single()
+
+              if (error) {
+                console.error('Error fetching role from profiles:', error.message)
+                return
+              }
+
+              role = profileData?.role
+
+              // Optional: sync role back to metadata so next login is faster
+              if (role) {
+                await supabaseClient.auth.updateUser({
+                  data: { role },
+                })
+              }
+            }
+
+            if (role === 'admin' || role === 'user') {
+              setRole(role)
+            }
+
+            if (!role) return null // or show a spinner
+
+
+        }
+
+        fetchRole()
+
+  const { data: listener } = supabaseClient.auth.onAuthStateChange(() => {
     fetchRole()
+  })
 
-    // Subscribe to auth state changes
-    const { data: authListener } = supabaseClient.auth.onAuthStateChange(() => {
-      fetchRole()
-    })
-
-    return () => {
-      authListener?.subscription.unsubscribe()
-    }
-  }, [supabaseClient])
+  return () => {
+    listener?.subscription.unsubscribe()
+  }
+}, [supabaseClient])
 
   const commonLinks = useMemo(() => [
     {
